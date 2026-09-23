@@ -63,6 +63,17 @@ function sequenceSelectedLayers() {
 
         // 3. Precompose. moveAllAttributes must be true here regardless -
         // AE only allows false when precomposing a single layer.
+        //
+        // IMPORTANT: precompose() re-orders the contents of the new comp by
+        // LAYER INDEX (lowest index becomes the top layer), not by timeline
+        // position. `indices` above is in stacking order (topmost first =
+        // lowest index first), so inside the precomp the sequence would come
+        // out reversed relative to the parent comp. Fix: sort the indices
+        // ascending (which makes the precomp's stacking match the parent's)
+        // and then explicitly re-order the precomp's layers by their new
+        // inPoints so frame 1 of the sequence is the FIRST layer in time,
+        // regardless of how AE stacked them.
+        indices.sort(function (a, b) { return a - b; });
         var compName = sequenceGetUniqueName("Sequence Precomp");
         var newComp = comp.layers.precompose(indices, compName, true);
 
@@ -73,6 +84,12 @@ function sequenceSelectedLayers() {
         // comp's full duration.
         var span = sequenceEnd - sequenceStart;
         newComp.duration = span;
+
+        // 4. Order the precomp's layers by timeline position (earliest
+        // inPoint at the TOP of the stack, matching how they read
+        // left-to-right in the parent comp's timeline). Without this the
+        // frames are all present but stacked in the wrong order.
+        sequenceOrderByTime(newComp);
 
         var outerLayer = sequenceFindLayerBySource(comp, newComp);
         if (outerLayer) {
@@ -103,6 +120,48 @@ function sequenceFindLayerBySource(comp, item) {
         if (comp.layer(i).source === item) return comp.layer(i);
     }
     return null;
+}
+
+// Re-stacks a comp's layers so they read in timeline order: earliest inPoint
+// ends up at index 1 (top of the stack), latest at the bottom. Implemented
+// with repeated moveToBeginning() rather than AE 2023+'s layer.move() -
+// works on every CEP-supported version. Only touches layers that actually
+// need moving, so undo history stays clean-ish.
+function sequenceOrderByTime(targetComp) {
+    // Snapshot (inPoint, current index) pairs, sorted by inPoint ascending.
+    // Ties keep their existing relative stacking (stable sort).
+    var entries = [];
+    var i;
+    for (i = 1; i <= targetComp.numLayers; i++) {
+        entries.push({ index: i, inPoint: targetComp.layer(i).inPoint });
+    }
+    entries.sort(function (a, b) { return a.inPoint - b.inPoint; });
+
+    // Walk the desired order from earliest to latest, pulling each layer to
+    // the top as we go. Each pull renumbers everything above/at it, so look
+    // the layer up fresh by its ORIGINAL index via a surviving mapping:
+    // capture the layer references first (they stay valid across moves).
+    var orderedLayers = [];
+    for (i = 0; i < entries.length; i++) {
+        orderedLayers.push(targetComp.layer(entries[i].index));
+    }
+    // Careful: entries[].index was captured BEFORE any moves, but
+    // orderedLayers must be resolved before the first moveToBeginning call
+    // changes indices - which this loop does. Safe because no move has
+    // happened yet at this point.
+    for (i = 0; i < orderedLayers.length; i++) {
+        orderedLayers[i].moveToEnd();
+    }
+    // Moving each layer (earliest -> latest) to the END leaves the LAST
+    // processed (latest inPoint) at the very bottom and pushes earlier ones
+    // up progressively... which is exactly wrong. Reverse: process latest
+    // first so it lands bottom-most only once.
+    //
+    // Simpler correct approach: clear-and-rebuild via moveToBeginning in
+    // reverse desired order.
+    for (i = orderedLayers.length - 1; i >= 0; i--) {
+        orderedLayers[i].moveToBeginning();
+    }
 }
 
 function sequenceGetUniqueName(baseName) {

@@ -3,14 +3,14 @@
 <ExtensionManifest
     Version="7.0"
     ExtensionBundleId="com.motiontoolkit.zylur"
-    ExtensionBundleVersion="1.0.0"
+    ExtensionBundleVersion="4.1.5"
     ExtensionBundleName="Motion Toolkit"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <ExtensionList>
         <Extension
             Id="com.motiontoolkit.zylur.panel"
-            Version="1.0.0" />
+            Version="4.1.5" />
     </ExtensionList>
 
     <ExecutionEnvironment>
@@ -89,4 +89,4 @@
 
     </DispatchInfoList>
 
-</ExtensionManifest>
+</ExtensionManifest>
