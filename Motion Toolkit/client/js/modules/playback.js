@@ -104,8 +104,11 @@
             return;
           }
           if (info.sourceKind === 'still') {
-            finish('A single still image has no frames to interpolate - select a video or image sequence.', 'error');
+            finish('The selected source resolves to a single still image - there are no frames to interpolate. Select a video, image sequence, offline footage, or a precomp containing one.', 'error');
             return;
+          }
+          if (info.note) {
+            setStatus(info.note, '');
           }
           if (info.sourceKind === 'sequence' && !info.framePattern) {
             finish('Could not work out the image-sequence frame pattern for that layer.', 'error');
@@ -173,7 +176,7 @@
           const seqName = `${baseName}_RIFE_${multiplier}x`;
           loadPlaybackModules(() => {
             csInterface.evalScript(
-              `playbackPlaceInterpolated("${escapeScriptString(aeGlob)}", "${escapeScriptString(seqName)}", "${escapeScriptString(info.sourcePath)}", ${multiplier})`,
+              `playbackPlaceInterpolated("${escapeScriptString(aeGlob)}", "${escapeScriptString(seqName)}", "${escapeScriptString(info.sourcePath)}", ${multiplier}, ${Number(info.timeShift) || 0})`,
               (rawResult) => {
                 const result = parseHostResult(rawResult, 'Could not place the interpolated sequence');
                 finish(result.message, result.ok ? 'success' : 'error');

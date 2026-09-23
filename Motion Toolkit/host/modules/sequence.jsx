@@ -44,62 +44,66 @@ function sequenceSelectedLayers() {
             layers[i].outPoint = layers[i].inPoint + frameDuration;
         }
 
-        // 2. Sequence back-to-back. The first (topmost) layer keeps its
-        // current position; every layer after it is moved - via startTime,
-        // which shifts inPoint/outPoint together and so preserves the
-        // 1-frame trim from step 1 - so its inPoint lands exactly on the
-        // previous layer's new outPoint.
-        var cursor = layers[0].inPoint;
+        // 2. Compute the butt-sequenced timeline BEFORE moving anything.
+        // Frame N starts at N / frameRate - i.e. the sequence always begins
+        // at time 0 of the comp, like Adobe's own Scripts > Sequence Layers.
+        // (Previously we shifted layers onto each other while preserving the
+        // first layer's original start time, then trimmed the precomp to that
+        // offset span - which, combined with the old absolute-time reordering
+        // pass below, could leave every layer pushed past the end of the
+        // precomp's work area, i.e. invisible in the preview.)
+        var sequenceEnd = layers.length * frameDuration;
         var indices = [];
-        for (i = 0; i < layers.length; i++) {
-            var layer = layers[i];
-            var delta = cursor - layer.inPoint;
-            if (delta !== 0) layer.startTime += delta;
-            cursor = layer.outPoint;
-            indices.push(layer.index);
-        }
-        var sequenceStart = layers[0].inPoint;
-        var sequenceEnd = cursor;
+        for (i = 0; i < layers.length; i++) indices.push(layers[i].index);
 
-        // 3. Precompose. moveAllAttributes must be true here regardless -
-        // AE only allows false when precomposing a single layer.
+        // 3. Precompose FIRST, while the layers are still untouched.
+        // moveAllAttributes must be true here regardless - AE only allows
+        // false when precomposing a single layer.
         //
-        // IMPORTANT: precompose() re-orders the contents of the new comp by
-        // LAYER INDEX (lowest index becomes the top layer), not by timeline
-        // position. `indices` above is in stacking order (topmost first =
-        // lowest index first), so inside the precomp the sequence would come
-        // out reversed relative to the parent comp. Fix: sort the indices
-        // ascending (which makes the precomp's stacking match the parent's)
-        // and then explicitly re-order the precomp's layers by their new
-        // inPoints so frame 1 of the sequence is the FIRST layer in time,
-        // regardless of how AE stacked them.
-        indices.sort(function (a, b) { return a - b; });
+        // Why precompose before sequencing: precompose() copies the layers
+        // into the new comp keeping their CURRENT timeline positions, so any
+        // positions we set beforehand can land outside the new comp's work
+        // area (the classic "everything sits beyond the last frame" bug). By
+        // precomposing first and then positioning the layers INSIDE the
+        // precomp relative to its own time 0, the sequence is guaranteed to
+        // live within the comp.
+        //
+        // Note on stacking: precompose() keeps the parent's stacking order
+        // inside the new comp, so layer indices may NOT correspond to
+        // sequence order. That's fine - we address layers by identity via
+        // the returned ItemCollection (indices[k] maps to newComp.layers.item(k))
+        // and do NOT reorder the stack afterwards. For non-overlapping
+        // 1-frame layers, stacking order has zero effect on the preview;
+        // re-stacking was what previously corrupted positions.
         var compName = sequenceGetUniqueName("Sequence Precomp");
-        var newComp = comp.layers.precompose(indices, compName, true);
+        var movedLayers = comp.layers.precompose(indices, compName, true);
 
-        // Trim the new precomp - and the layer that now represents it back
-        // in the parent comp - to the span the sequence actually occupies,
-        // rather than leaving the precomp the same length as the whole
-        // parent comp. Delete this block if you'd rather keep the parent
-        // comp's full duration.
-        var span = sequenceEnd - sequenceStart;
-        newComp.duration = span;
+        // 4. Inside the precomp, place frame k at [k*fd, (k+1)*fd).
+        // Setting inPoint directly is safe because every layer is exactly one
+        // frame long, so no in/out crossover is possible.
+        var newComp = app.project.items.itemByName(compName);
+        if (!(newComp instanceof CompItem)) {
+            throw new Error("Precomposed comp \"" + compName + "\" not found.");
+        }
+        for (i = 0; i < movedLayers.length; i++) {
+            movedLayers.item(i + 1).inPoint = i * frameDuration;
+        }
+        newComp.workAreaStart = 0;
+        newComp.workAreaDuration = sequenceEnd;
 
-        // 4. Order the precomp's layers by timeline position (earliest
-        // inPoint at the TOP of the stack, matching how they read
-        // left-to-right in the parent comp's timeline). Without this the
-        // frames are all present but stacked in the wrong order.
-        sequenceOrderByTime(newComp);
-
+        // 5. Back in the parent comp, trim the layer representing the
+        // precomp to exactly the sequence span, starting at time 0.
         var outerLayer = sequenceFindLayerBySource(comp, newComp);
         if (outerLayer) {
-            outerLayer.startTime = sequenceStart; // also moves inPoint to sequenceStart
+            outerLayer.startTime = 0;
+            outerLayer.inPoint = 0;
             outerLayer.outPoint = sequenceEnd;
         }
 
         result.ok = true;
         result.message = layers.length + " layer" + (layers.length === 1 ? "" : "s") +
-            " sequenced into \"" + newComp.name + "\".";
+            " sequenced into \"" + newComp.name + "\" (" +
+            layers.length + " frames @ " + comp.frameRate + " fps).";
     } catch (err) {
         result.ok = false;
         result.message = "Sequence Error: " + err.toString();
@@ -122,11 +126,10 @@ function sequenceFindLayerBySource(comp, item) {
     return null;
 }
 
-// Re-stacks a comp's layers so they read in timeline order: earliest inPoint
-// ends up at index 1 (top of the stack), latest at the bottom. Implemented
-// with repeated moveToBeginning() rather than AE 2023+'s layer.move() -
-// works on every CEP-supported version. Only touches layers that actually
-// need moving, so undo history stays clean-ish.
+// Re-stacks a comp's layers so they read in timeline order. NOTE: no longer
+// used by sequenceSelectedLayers() - for non-overlapping 1-frame layers the
+// stacking order has no effect on the preview, and re-stacking was found to
+// corrupt layer positions. Kept as a utility only; safe to delete.
 function sequenceOrderByTime(targetComp) {
     // Snapshot (inPoint, current index) pairs, sorted by inPoint ascending.
     // Ties keep their existing relative stacking (stable sort).

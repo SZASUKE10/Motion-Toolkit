@@ -1,2 +1,2 @@
-# Build artifacts and distribution files
-dist/
+# Build artifacts and outputs
+outputs/

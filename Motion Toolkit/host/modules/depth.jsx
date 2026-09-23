@@ -41,23 +41,12 @@ function depthGetJobInfo() {
     }
 
     var layer = selected[0];
-    var file = depthGetLayerSourceFile(layer);
-    if (!file) {
-        return JSON.stringify({ ok: false, message: "Select a layer whose source is an image or video file (not a solid, text, comp, or offline footage)." });
+    var job = depthResolveJobSource(layer);
+    if (!job.ok) {
+        return JSON.stringify(job);
     }
-
-    // Classify the source so the Node side picks the right runner:
-    //   still   -> depth_runner.py         (one image in, one depth png out)
-    //   video   -> video_depth_runner.py   (decoded per-frame @ 1080p default)
-    //   sequence-> video_depth_runner.py   (frames globbed straight from disk)
-    //
-    // Image sequences are detected the same way organize.jsx does it:
-    // image extension + isStill === false means multiple frames were
-    // imported together. Everything else non-still is treated as a video.
-    var sourceKind = "still";
-    if (layer.source.mainSource.isStill === false) {
-        sourceKind = depthIsImageSequence(file.name) ? "sequence" : "video";
-    }
+    var file = job.file;
+    var sourceKind = job.sourceKind;
 
     var projectDir = app.project.file.parent.fsName;
     var depthDir = projectDir + "/DEPTH";
@@ -83,7 +72,7 @@ function depthGetJobInfo() {
         ok: true,
         sourceKind: sourceKind,
         sourcePath: file.fsName,
-        sourceName: layer.source.name,
+        sourceName: file.name,
         framePattern: framePattern,
         firstFrameNumber: firstFrameNumber,
         projectDir: projectDir,
@@ -93,7 +82,13 @@ function depthGetJobInfo() {
         compName: comp.name,
         layerInPoint: layer.inPoint,
         layerOutPoint: layer.outPoint,
-        frameRate: comp.frameRate
+        frameRate: comp.frameRate,
+        // Precomp support: seconds between the selected layer's start and
+        // the resolved child footage's start (0 when a plain footage layer
+        // was selected). Playback uses it to trim/place the RIFE result so
+        // it matches what the precomp actually showed.
+        timeShift: job.timeShift || 0,
+        note: job.note || ""
     });
 }
 
@@ -144,6 +139,121 @@ function depthGetLayerSourceFile(layer) {
     if (!file || !file.exists) return null;
 
     return file;
+}
+
+// Is this footage item an OFFLINE proxy whose real (relinked) file still
+// lives on disk? AE reports a FileSource for proxies too, but mainSource.file
+// may point at a missing/placeholder path while `proxyPath` remembers the
+// original local media. We only accept it when that original actually exists
+// on disk - i.e. "offline footage that is local footage stored in my storage".
+function depthOfflineProxyFile(footageItem) {
+    try {
+        if (!footageItem.mainProxy) return null; // already using the real file
+        var pp = footageItem.proxyPath;
+        if (!pp) return null;
+        var f = new File(pp);
+        return f.exists ? f : null;
+    } catch (err) {
+        return null;
+    }
+}
+
+// Shared source resolver for DEPTH and PLAY (RIFE). Returns
+//   { ok:true, file, sourceKind, layer, timeShift, note }
+// or { ok:false, message }.
+//
+// Accepts three kinds of selected layers:
+//   1. A normal footage layer with an online file      -> as before.
+//   2. An OFFLINE footage layer whose original file is still on disk
+//      (found via proxyPath)                           -> uses that file.
+//   3. A COMPOSITION / PRECOMP layer                   -> drills into the
+//      precomp and finds its single dominant footage child (video or image
+//      sequence). Nested precomps are searched recursively. The child's
+//      effective start time inside the precomp is returned as `timeShift`
+//      so callers can trim the result back to match the precomp's timing.
+//
+// Classifies the resolved file as still / video / sequence:
+//   still   -> depth_runner.py         (one image in, one depth png out)
+//   video   -> *_runner.py             (decoded per-frame @ 1080p default)
+//   sequence-> *_runner.py             (frames globbed straight from disk)
+function depthResolveJobSource(layer) {
+    // --- Case 3: composition / precomp layer -----------------------------
+    if (layer instanceof AVLayer && layer.source instanceof CompItem) {
+        var found = depthFindPrecompFootage(layer.source, 0);
+        if (!found) {
+            return { ok: false, message: "That precomp contains no footage layer with a usable file on disk (solids/text/shapes and procedurally-rendered comps cannot be interpolated - render the precomp to a video first)." };
+        }
+        var inner = depthResolveJobSource(found.layer);
+        if (!inner.ok) {
+            return { ok: false, message: inner.message + " (inside precomp \"" + layer.source.name + "\")" };
+        }
+        inner.timeShift = found.startTime;
+        inner.note = "Using footage \"" + inner.file.name + "\" found inside precomp \"" + layer.source.name + "\".";
+        return inner;
+    }
+
+    // --- Cases 1 & 2: footage layer, online or offline-with-local-file ---
+    if (layer instanceof AVLayer && layer.source instanceof FootageItem) {
+        var file = null;
+        try {
+            if (layer.source.mainSource && (layer.source.mainSource instanceof FileSource)) {
+                var f = layer.source.mainSource.file;
+                if (f && f.exists) file = f;
+            }
+        } catch (err) { /* fall through to proxy check */ }
+
+        if (!file) {
+            file = depthOfflineProxyFile(layer.source);
+            if (!file) {
+                return { ok: false, message: "This layer's footage is offline and its original file was not found on disk. Relink it (or keep the source files where they were when first imported), or select a layer whose media is available." };
+            }
+        }
+
+        var sourceKind = "still";
+        try {
+            if (layer.source.mainSource && layer.source.mainSource.isStill === false) {
+                sourceKind = depthIsImageSequence(file.name) ? "sequence" : "video";
+            } else if (depthIsImageSequence(file.name) === false) {
+                sourceKind = "video"; // offline non-image file => treat as video container
+            }
+        } catch (err) {
+            sourceKind = depthIsImageSequence(file.name) ? "sequence" : "video";
+        }
+
+        return { ok: true, file: file, sourceKind: sourceKind, layer: layer, timeShift: 0 };
+    }
+
+    return { ok: false, message: "Select a footage layer, an offline footage layer whose file is still on disk, or a precomp containing footage (not solids, text, or shape layers)." };
+}
+
+// Recursively searches a comp for the best footage candidate for RIFE/depth:
+// prefers multi-frame sources (video / image sequence) over stills. Returns
+// { layer, startTime } where startTime is the deepest child's inPoint shifted
+// through every nesting level (seconds relative to the outer comp), or null.
+function depthFindPrecompFootage(comp, depthSoFar) {
+    if (depthSoFar > 8) return null; // guard against cyclic precomps
+    var bestVideo = null, bestStill = null;
+    for (var i = 1; i <= comp.numLayers; i++) {
+        var lyr = comp.layer(i);
+        var childStart = lyr.inPoint;
+        if (lyr instanceof AVLayer && lyr.source instanceof CompItem) {
+            var nested = depthFindPrecompFootage(lyr.source, depthSoFar + 1);
+            if (nested) {
+                nested.startTime = childStart + nested.startTime;
+                // Treat a nested video candidate as a video candidate here.
+                if (!bestVideo) bestVideo = nested;
+            }
+            continue;
+        }
+        if (lyr instanceof AVLayer && lyr.source instanceof FootageItem) {
+            var isMulti = false;
+            try { isMulti = (lyr.source.mainSource && lyr.source.mainSource.isStill === false); } catch (err) {}
+            var cand = { layer: lyr, startTime: childStart };
+            if (isMulti) { if (!bestVideo) bestVideo = cand; }
+            else if (!bestStill) bestStill = cand;
+        }
+    }
+    return bestVideo || bestStill;
 }
 
 // Called once host/python/depth_runner.py has written its output file.
