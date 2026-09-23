@@ -88,7 +88,12 @@ function depthGetJobInfo() {
         firstFrameNumber: firstFrameNumber,
         projectDir: projectDir,
         depthDir: depthDir,
-        layerName: layer.name
+        layerName: layer.name,
+        // Extra context the playback (RIFE) module needs; harmless for depth.
+        compName: comp.name,
+        layerInPoint: layer.inPoint,
+        layerOutPoint: layer.outPoint,
+        frameRate: comp.frameRate
     });
 }
 

@@ -54,19 +54,30 @@ def parse_args():
 
 
 def pick_device():
-    """Best available torch device, as the `device` value pipeline() expects.
-    Falls back to CPU (-1) if torch/CUDA/MPS aren't available - inference
-    still works, just slower."""
+    """NVIDIA-CUDA-only device selection (RTX 3060 12GB target).
+
+    requirements.txt pins the cu121 CUDA wheels of PyTorch, so this tooling
+    assumes an NVIDIA GPU. If CUDA is unavailable we fail fast with a clear
+    message instead of silently crawling on CPU. Set MOTION_TOOLKIT_ALLOW_CPU=1
+    as an escape hatch for machines without an NVIDIA card."""
+    import os
     try:
         import torch
         if torch.cuda.is_available():
             return 0
-        mps = getattr(torch.backends, "mps", None)
-        if mps is not None and mps.is_available():
-            return "mps"
     except Exception:
         pass
-    return -1
+    if os.environ.get("MOTION_TOOLKIT_ALLOW_CPU") == "1":
+        print("WARNING: CUDA unavailable - running on CPU (slow). "
+              "Install NVIDIA drivers + the CUDA build from requirements.txt.",
+              file=sys.stderr, flush=True)
+        return -1
+    print("ERROR: No NVIDIA CUDA GPU detected. Motion Toolkit targets CUDA "
+          "(RTX 30-series or newer). Check your NVIDIA driver and re-run:\n"
+          "  pip install -r requirements.txt\n"
+          "(it pins the cu121 NVIDIA-only PyTorch wheels). To force CPU anyway, "
+          "set MOTION_TOOLKIT_ALLOW_CPU=1.", file=sys.stderr, flush=True)
+    sys.exit(2)
 
 
 def main():
