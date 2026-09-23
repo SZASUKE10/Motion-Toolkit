@@ -1,4 +1,14 @@
-torch
+# --- CUDA (NVIDIA) build of PyTorch only -----------------------------------
+# RTX 3060 12GB = Ampere (sm_86). We pin the cu121 wheels so pip NEVER pulls
+# the huge CPU-only or ROCm builds. Install with:
+#   pip install -r requirements.txt
+# (the --extra-index-url line below is honored by pip when reading the file)
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+torch==2.3.1+cu121
+torchvision==0.18.1+cu121
+
+# --- Everything else --------------------------------------------------------
 transformers
 pillow
 numpy

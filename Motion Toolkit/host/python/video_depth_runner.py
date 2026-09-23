@@ -68,16 +68,24 @@ def collect_sequence_frames(pattern):
 
 
 def pick_device():
+    """NVIDIA-CUDA-only (RTX 3060 target). Fails fast without a GPU;
+    MOTION_TOOLKIT_ALLOW_CPU=1 forces CPU as an escape hatch."""
+    import os
     try:
         import torch
         if torch.cuda.is_available():
             return 0
-        mps = getattr(torch.backends, "mps", None)
-        if mps is not None and mps.is_available():
-            return "mps"
     except Exception:
         pass
-    return -1
+    if os.environ.get("MOTION_TOOLKIT_ALLOW_CPU") == "1":
+        print("WARNING: CUDA unavailable - running on CPU (slow).",
+              file=sys.stderr, flush=True)
+        return -1
+    print("ERROR: No NVIDIA CUDA GPU detected. Install the NVIDIA driver and "
+          "the cu121 wheels from requirements.txt "
+          "(pip install -r requirements.txt), or set MOTION_TOOLKIT_ALLOW_CPU=1 "
+          "to force CPU.", file=sys.stderr, flush=True)
+    sys.exit(2)
 
 
 def load_model(model_key):

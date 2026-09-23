@@ -197,6 +197,13 @@ def load_rife(model_key):
         model.load_state_dict(sd, strict=False)
         model.eval()
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device != "cuda" and os.environ.get("MOTION_TOOLKIT_ALLOW_CPU") != "1":
+            print("ERROR: RIFE needs an NVIDIA CUDA GPU (RTX 3060 target). "
+                  "Install the driver + cu121 wheels from requirements.txt "
+                  "(pip install -r requirements.txt), or set "
+                  "MOTION_TOOLKIT_ALLOW_CPU=1 to force CPU.",
+                  file=sys.stderr, flush=True)
+            sys.exit(2)
         model.to(device)
         print(f"Loaded local RIFE weights: {weight_file} (device={device})", flush=True)
         return model, device

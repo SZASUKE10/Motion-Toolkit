@@ -137,28 +137,16 @@ function sequenceOrderByTime(targetComp) {
     }
     entries.sort(function (a, b) { return a.inPoint - b.inPoint; });
 
-    // Walk the desired order from earliest to latest, pulling each layer to
-    // the top as we go. Each pull renumbers everything above/at it, so look
-    // the layer up fresh by its ORIGINAL index via a surviving mapping:
-    // capture the layer references first (they stay valid across moves).
+    // Resolve layer references BEFORE any moves happen (entries[].index was
+    // captured up front, and each move renumbers the stack - but live layer
+    // objects stay valid across moves). Then pull the layers to the TOP of
+    // the stack in reverse desired order, so the earliest-inPoint layer ends
+    // up at index 1 and the latest lands at the bottom - i.e. stacking
+    // matches timeline order.
     var orderedLayers = [];
     for (i = 0; i < entries.length; i++) {
         orderedLayers.push(targetComp.layer(entries[i].index));
     }
-    // Careful: entries[].index was captured BEFORE any moves, but
-    // orderedLayers must be resolved before the first moveToBeginning call
-    // changes indices - which this loop does. Safe because no move has
-    // happened yet at this point.
-    for (i = 0; i < orderedLayers.length; i++) {
-        orderedLayers[i].moveToEnd();
-    }
-    // Moving each layer (earliest -> latest) to the END leaves the LAST
-    // processed (latest inPoint) at the very bottom and pushes earlier ones
-    // up progressively... which is exactly wrong. Reverse: process latest
-    // first so it lands bottom-most only once.
-    //
-    // Simpler correct approach: clear-and-rebuild via moveToBeginning in
-    // reverse desired order.
     for (i = orderedLayers.length - 1; i >= 0; i--) {
         orderedLayers[i].moveToBeginning();
     }
