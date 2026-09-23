@@ -294,6 +294,24 @@
                         <select data-depth-model-select></select>
                     </label>
                 </div>
+
+                <div class="depth-settings-panel" data-rife-settings-panel>
+                    <div class="depth-settings-heading">
+                        <span class="browser-kicker">Playback</span>
+                        <h2>RIFE Interpolation</h2>
+                    </div>
+                    <p class="depth-settings-note">Used by the footer PLAY button (2x/4x/8x/16x). Runs rife_runner.py on an NVIDIA CUDA GPU only - see host/python/requirements.txt. Place model weights in rife-models/ (see its README).</p>
+                    <label class="discord-field-stack">
+                        <span>Model</span>
+                        <select data-rife-model-select></select>
+                    </label>
+                    <label class="discord-field-stack">
+                        <span>Max output height (px)</span>
+                        <input type="number" min="240" max="2160" step="2" data-rife-resolution placeholder="1080">
+                    </label>
+                    <button class="discord-save-button" type="button" data-rife-save>SAVE</button>
+                    <p class="discord-status" data-rife-status></p>
+                </div>
             </div>
             <p class="settings-version" data-settings-version></p>
             </section>

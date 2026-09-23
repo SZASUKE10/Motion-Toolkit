@@ -1,9 +1,10 @@
 // Sorts every item in the Project panel into a folder based on its type:
 //   Compositions        -> "Comp"
-//   .mp4 footage        -> "Videos"
+//   video footage       -> "Videos"  (.mp4, .mov, .avi, .mkv, .webm, .m4v,
+//                                      .mxf, .wmv, .mts/.m2ts - case-insensitive)
 //   image sequences     -> "Flowframe"
-//   .mp3 footage        -> "sound"
-// Anything else (stills, solids, other formats) is left where it is.
+//   audio footage       -> "sound"   (.mp3, .wav, .aif/.aiff, .m4a, .aac, .flac, .ogg)
+// Anything else (stills, solids, unknown formats) is left where it is.
 
 function organizeProject() {
 	if (!app.project) {
@@ -48,15 +49,22 @@ function organizeProject() {
 				var dot = lowerName.lastIndexOf(".");
 				var ext = dot >= 0 ? lowerName.substring(dot + 1) : "";
 
-				if (ext === "mp4") {
+				if (isVideoExtension(ext)) {
+					// Container extensions are unambiguous - a .MOV is a video
+					// regardless of how AE reports isStill. Checked BEFORE the
+					// image-sequence test so QuickTime files never fall through.
 					moveIfNeeded(item, videosFolder, counts, "Videos");
-				} else if (ext === "mp3") {
+				} else if (isAudioExtension(ext)) {
 					moveIfNeeded(item, soundFolder, counts, "sound");
 				} else if (isImageExtension(ext) && item.mainSource.isStill === false) {
 					// isStill === false + an image extension means multiple frames
 					// were imported together - i.e. an image sequence, not a
 					// single still.
 					moveIfNeeded(item, flowframeFolder, counts, "Flowframe");
+				} else if (!isImageExtension(ext) && item.mainSource.isStill === false) {
+					// Unknown/extension-less source that holds multiple frames
+					// (e.g. native-codec footage) - treat it as video too.
+					moveIfNeeded(item, videosFolder, counts, "Videos");
 				}
 			}
 		}
@@ -90,6 +98,28 @@ function isImageExtension(ext) {
 	var imageExts = ["png", "jpg", "jpeg", "tif", "tiff", "exr", "tga", "dpx", "psd", "gif", "bmp"];
 	for (var i = 0; i < imageExts.length; i++) {
 		if (imageExts[i] === ext) return true;
+	}
+	return false;
+}
+
+// Video containers AE can import as footage. ".mov" was the bug: the old
+// code only matched "mp4", so QuickTime files (the most common AE video
+// format) were never detected and stayed out of the Videos folder.
+function isVideoExtension(ext) {
+	var videoExts = [
+		"mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "flv",
+		"mxf", "mts", "m2ts", "mpg", "mpeg", "ogv", "3gp", "insv", "r3d"
+	];
+	for (var i = 0; i < videoExts.length; i++) {
+		if (videoExts[i] === ext) return true;
+	}
+	return false;
+}
+
+function isAudioExtension(ext) {
+	var audioExts = ["mp3", "wav", "aif", "aiff", "m4a", "aac", "flac", "ogg", "wma"];
+	for (var i = 0; i < audioExts.length; i++) {
+		if (audioExts[i] === ext) return true;
 	}
 	return false;
 }
