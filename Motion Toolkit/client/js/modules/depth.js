@@ -1,12 +1,16 @@
-/* Wires the footer "DEPTH" button to host/modules/depth.jsx and
-   host/python/depth_runner.py.
+/* Wires the footer "DEPTH" button to host/modules/depth.jsx and the Python
+   runners under host/python/.
 
    Flow for one click:
      1. evalScript depthGetJobInfo()      -> selected layer's source path,
-                                              project folder, DEPTH folder.
-     2. fs.mkdirSync the DEPTH folder, spawn depth_runner.py against it.
+                                              source kind (still / video /
+                                              sequence), project folder.
+     2. fs.mkdirSync the DEPTH output folder, then spawn either
+        depth_runner.py (stills) or video_depth_runner.py (videos + image
+        sequences, 1080p default) against it.
      3. On the child process's "close" event, evalScript depthImportResult()
-        to bring the finished file back into the AE project.
+        (still) or depthImportSequenceResult() (video/sequence) to bring the
+        finished file(s) back into the AE project.
 
    Step 2 runs on Node's event loop, not ExtendScript's - child_process.spawn
    returns immediately and the model runs in its own OS process, so neither
@@ -34,7 +38,7 @@
     });
   }
 
-  // Shared between depthGetJobInfo() and depthImportResult() results below -
+  // Shared between depthGetJobInfo() and depthImport*Result() results below -
   // both follow graph-engine.jsx's {ok, message} convention.
   function parseHostResult(result, fallbackMessage) {
     if (result && result.indexOf('EvalScript error') !== -1) {
@@ -69,9 +73,9 @@
       return;
     }
 
-    const { spawn } = require('child_process');
     const fs = require('fs');
     const path = require('path');
+    const python = window.MotionToolkitPython;
 
     let jobRunning = false;
 
@@ -94,61 +98,132 @@
             finish(info.message, 'error');
             return;
           }
+          if (info.sourceKind === 'sequence' && !info.framePattern) {
+            finish('Could not work out the image-sequence frame pattern for that layer.', 'error');
+            return;
+          }
           runDepthJob(info);
         });
       });
     });
 
     function runDepthJob(info) {
+      const config = window.MotionToolkitDepthConfig;
+      const model = config.getSelectedModel();
+      const baseName = path.parse(info.sourcePath).name;
+
+      if (info.sourceKind === 'still') {
+        runStillJob(info, model, baseName);
+      } else {
+        runSequenceJob(info, model, baseName);
+      }
+    }
+
+    // Single image -> single depth png (original behaviour).
+    function runStillJob(info, model, baseName) {
       let outputPath;
       try {
         fs.mkdirSync(info.depthDir, { recursive: true });
-        const baseName = path.parse(info.sourcePath).name;
         outputPath = path.join(info.depthDir, `${baseName}_depth.png`);
       } catch (err) {
         finish(`Could not prepare the DEPTH folder: ${err.message}`, 'error');
         return;
       }
 
-      const config = window.MotionToolkitDepthConfig;
-      const model = config.getSelectedModel();
-      const scriptPath = path.join(csInterface.getSystemPath(SystemPath.EXTENSION), 'host', 'python', 'depth_runner.py');
-
       setStatus(`Generating depth map (${model})...`, '');
 
-      const child = spawn(config.PYTHON_EXECUTABLE, [
-        scriptPath,
+      python.runPythonScript(csInterface, 'depth_runner.py', [
         '--input', info.sourcePath,
         '--output', outputPath,
         '--model', model
-      ]);
-
-      let stderrTail = '';
-      child.stderr.on('data', (chunk) => {
-        stderrTail = (stderrTail + chunk.toString()).slice(-2000);
-        console.error('depth_runner.py:', chunk.toString());
-      });
-      child.stdout.on('data', (chunk) => console.log('depth_runner.py:', chunk.toString()));
-
-      child.on('error', (err) => {
-        // e.g. ENOENT - config.PYTHON_EXECUTABLE isn't on PATH.
-        finish(`Could not start Python (${config.PYTHON_EXECUTABLE}): ${err.message}`, 'error');
-      });
-
-      child.on('close', (code) => {
-        if (code !== 0 || !fs.existsSync(outputPath)) {
-          const lastLine = stderrTail.trim().split('\n').pop() || `exit code ${code}`;
-          finish(`Depth generation failed: ${lastLine}`, 'error');
-          return;
-        }
-
-        setStatus('Importing depth map...', '');
-        loadDepthModule(() => {
-          csInterface.evalScript(`depthImportResult("${escapeScriptString(outputPath)}")`, (rawResult) => {
-            const result = parseHostResult(rawResult, 'Could not import the depth map');
-            finish(result.message, result.ok ? 'success' : 'error');
+      ], {
+        onError: (message) => finish(message, 'error'),
+        onClose: (code) => {
+          if (code !== 0 || !fs.existsSync(outputPath)) {
+            finish(`Depth generation failed (see console). Exit code ${code}.`, 'error');
+            return;
+          }
+          setStatus('Importing depth map...', '');
+          loadDepthModule(() => {
+            csInterface.evalScript(`depthImportResult("${escapeScriptString(outputPath)}")`, (rawResult) => {
+              const result = parseHostResult(rawResult, 'Could not import the depth map');
+              finish(result.message, result.ok ? 'success' : 'error');
+            });
           });
-        });
+        }
+      });
+    }
+
+    // Video / image sequence -> DEPTH/<name>_DEPTH/ with numbered frames,
+    // re-imported as a single sequence footage item. Videos are decoded at
+    // the configured resolution (1080p by default); sequences keep their
+    // native frame size.
+    function runSequenceJob(info, model, baseName) {
+      const config = window.MotionToolkitDepthConfig;
+      const resolution = config.getResolution();
+      const outDir = path.join(info.depthDir, `${baseName}_DEPTH`);
+      let latestStdout = '';
+
+      try {
+        fs.mkdirSync(outDir, { recursive: true });
+      } catch (err) {
+        finish(`Could not prepare the DEPTH folder: ${err.message}`, 'error');
+        return;
+      }
+
+      const isVideo = info.sourceKind === 'video';
+      const args = [
+        '--input', info.sourcePath,
+        '--output-dir', outDir,
+        '--model', model,
+        '--prefix', 'depth',
+        '--ext', 'png'
+      ];
+      if (isVideo) {
+        args.push('--scale', String(resolution));
+      } else {
+        args.push('--frame-pattern', info.framePattern);
+        args.push('--start-number', String(info.firstFrameNumber || 0));
+      }
+
+      setStatus(`Generating depth sequence (${model}${isVideo ? `, ${resolution}p` : ''})...`, '');
+
+      python.runPythonScript(csInterface, 'video_depth_runner.py', args, {
+        onStdout: (text) => {
+          latestStdout += text;
+          const progress = python.lastProgress(latestStdout);
+          if (progress) {
+            setStatus(`Depth frame ${progress.done}/${progress.total} (${model})...`, '');
+          }
+        },
+        onError: (message) => finish(message, 'error'),
+        onClose: (code) => {
+          let frameCount = 0;
+          try {
+            frameCount = fs.readdirSync(outDir).filter((n) => n.startsWith('depth_')).length;
+          } catch (err) {
+            frameCount = 0;
+          }
+          if (code !== 0 || frameCount === 0) {
+            finish(`Depth generation failed (see console). Exit code ${code}.`, 'error');
+            return;
+          }
+
+          setStatus(`Importing ${frameCount}-frame depth sequence...`, '');
+          // "#" is AE's sequence wildcard: ".../depth_#.png" imports every
+          // depth_NNNN.png as ONE multi-frame footage item.
+          const aeGlob = path.join(outDir, 'depth_#.png').replace(/\\/g, '/');
+          const seqName = `${baseName}_DEPTH`;
+          loadDepthModule(() => {
+            csInterface.evalScript(
+              `depthImportSequenceResult("${escapeScriptString(aeGlob)}", "${escapeScriptString(seqName)}")`,
+              (rawResult) => {
+                const result = parseHostResult(rawResult, 'Could not import the depth sequence');
+                finish(result.message, result.ok ? 'success' : 'error');
+              }
+            );
+          });
+        }
       });
     }
   });

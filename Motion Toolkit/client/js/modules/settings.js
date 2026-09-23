@@ -4,9 +4,9 @@
    the DEPTH button runs, so this file only owns the Settings-tab UI for
    choosing the model, not the model list itself. */
 (() => {
-  // Bump this on release. Task asked for "4.0.1" specifically; this constant
-  // is the one place that needs to change next time.
-  const MOTION_TOOLKIT_VERSION = '4.0.1';
+  // Bump this on release; this constant is the one place that needs to
+  // change next time. Kept in sync with CSXS/manifest.xml's version fields.
+  const MOTION_TOOLKIT_VERSION = '4.1.5';
 
   document.addEventListener('DOMContentLoaded', () => {
     const versionLabel = document.querySelector('[data-settings-version]');
