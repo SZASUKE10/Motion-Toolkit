@@ -1,0 +1,38 @@
+# --- CUDA (NVIDIA) build of PyTorch only -----------------------------------
+# RTX 3060 12GB = Ampere (sm_86). We pin the cu121 wheels so pip NEVER pulls
+# the huge CPU-only or ROCm builds. Install with:
+#   pip install -r requirements.txt
+#
+# *** IF YOU SEE "No matching distribution found for torch==..." WITH A LONG
+# *** LIST OF PLAIN VERSIONS (e.g. 2.9.0 ... 2.14.0): your pip is NOT actually
+# *** consulting download.pytorch.org. Two known causes:
+#   1. An old pip (<21.2) silently ignores --index-url inside requirements.txt.
+#      Fix first:  python -m pip install --upgrade pip
+#   2. Corporate proxy / index override. Then skip the file's index lines and
+#      run the explicit command instead (same result, guaranteed):
+#        pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 ^
+#          --index-url https://download.pytorch.org/whl/cu121
+#        pip install transformers pillow numpy opencv-python
+#
+# *** PYTHON VERSION: use CPython 3.10 / 3.11 / 3.12. Do NOT install into
+# *** Python 3.14 - pip there has a "BadMetadata ... invalid metadata entry
+# *** 'name'" sidecar bug that crashes while unpacking the huge torch wheel,
+# *** and torch only ships cp39-cp313 wheels anyway. Recommended setup:
+#     py -3.12 -m venv C:\mtk-env
+#     C:\mtk-env\Scripts\activate
+#     python -m pip install --upgrade pip
+#     pip install -r requirements.txt
+# On Python 3.13: cu121 has no wheels; swap the index + pins to:
+#   --index-url https://download.pytorch.org/whl/cu126
+#   torch==2.7.1+cu126 / torchvision==0.22.1+cu126
+--index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://pypi.org/simple
+
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+
+# --- Everything else --------------------------------------------------------
+transformers
+pillow
+numpy
+opencv-python

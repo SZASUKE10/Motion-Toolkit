@@ -1,0 +1,270 @@
+.quick-placer {
+    display: grid;
+  grid-template-columns: repeat(3, minmax(55px, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+
+.quick-placer[hidden] {
+  display: none;
+}
+
+.quick-layer {
+    background-color: var(--btn-base);    /* Default dark gray button background */
+    color: var(--text-primary);           /* Icon or text color inside button */
+    border-radius: var(--radius-sm);      /* Slight rounded corners */
+    padding: 6px 3px;                     /* Vertical and horizontal click area */
+    cursor: pointer;                      /* Turns cursor into a pointing hand on hover */
+    font-size: 13px;                      /* Icon label text size */
+    font-weight: 500;                     /* Semi-bold text */
+    display: flex;                        /* Centers content inside */
+    align-items: center;                  /* Centers vertically */
+    justify-content: center;              /* Centers horizontally */
+    transition: all 0.15s ease;           /* Smoothly animates hover and active state changes */
+    
+
+    border: 1px solid var(--divider);
+    width: auto;
+    height: 30px;
+}
+
+
+/* Hover state: triggers when the mouse cursor rests over the button */
+.quick-layer:hover {
+  background-color: var(--btn-hover);
+}
+
+/* Active state: triggers the exact millisecond the mouse button is clicked down */
+.quick-layer:active {
+  background-color: var(--btn-active);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); /* Creates a pressed-in, debossed look */
+}
+
+.quick-placer > label:not(.toggle) {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.quick-placer > label:nth-of-type(1),
+.quick-placer > label:nth-of-type(3) {
+  grid-column: 1 / span 2;
+}
+
+.quick-placer > label:nth-of-type(2),
+.quick-placer > label:nth-of-type(4) {
+  grid-column: 3;
+  justify-self: center;
+}
+
+.toggle {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 16px;
+}
+
+.toggle input {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background-color: var(--bg-input);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  left: 2px;
+  top: 2px;
+  background-color: var(--text-secondary);
+  border-radius: 2px;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.toggle input:checked + .slider {
+  background-color: var(--tint-weak);
+  border-color: var(--text-primary);
+}
+
+.toggle input:checked + .slider::before {
+  background-color: var(--text-primary);
+  transform: translateX(12px);
+}
+
+input.toggle-3d:checked + .slider {
+  background-color: var(--tint-weak);
+  border-color: var(--text-primary);
+}
+
+input.toggle-3d:checked + .slider::before {
+  background-color: var(--text-primary);
+}
+
+.toggle input:focus-visible + .slider {
+  outline: 1px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+input.toggle-3d:focus-visible + .slider {
+  outline-color: var(--text-primary);
+}
+
+/* ========================================
+   Footer mode toggle — swaps footer-right between the quick-layer
+   placer and the playback placer. footer-left (anchor grid) never changes.
+   ======================================== */
+.footer-right {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.footer-mode-toggle {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  width: 22px;
+  height: 18px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--btn-base);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.footer-mode-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+.footer-mode-toggle:hover {
+  background-color: var(--btn-hover);
+  color: var(--text-primary);
+}
+
+.footer-mode-toggle[aria-pressed="true"] {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* ========================================
+   Playback placer — mode B of the footer-right section.
+   Play/speed row is still UI-only. Sequence/Depth are wired up in
+   js/modules/sequence.js and js/modules/depth.js; .playback-status below is
+   the shared result/error line for both.
+   ======================================== */
+.playback-placer {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playback-placer[hidden] {
+  display: none;
+}
+
+.playback-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.play-button {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-play);
+  border: 1px solid var(--color-play);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+
+.play-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.play-button:hover {
+  filter: brightness(1.1);
+}
+
+.speed-select {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  box-sizing: border-box;
+  background-color: var(--bg-input);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  padding: 0 6px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 10px;
+}
+
+.wide-button {
+  width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+  background-color: var(--btn-base);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+}
+
+.wide-button:hover {
+  background-color: var(--btn-hover);
+}
+
+.wide-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Shared result/status line under the Sequence/Depth buttons. */
+.playback-status {
+  margin: 2px 2px 0;
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.playback-status[data-state="success"] {
+  color: var(--text-primary);
+}
+
+.playback-status[data-state="error"] {
+  color: var(--color-error);
+}

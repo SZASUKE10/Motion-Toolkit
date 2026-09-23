@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <!-- Style Sheets-->
+
+     <link rel="stylesheet" href="css/anchor.css">
+     <link rel="stylesheet" href="css/mstyle.css">
+     <link rel="stylesheet" href="css/quicklayer.css">
+    <link rel="stylesheet" href="css/browser.css">
+    <link rel="stylesheet" href="css/graph.css">
+
+  </head>
+  <body>
+    <div class="app-viewport">
+        <div class="app-shell">
+        <header class="app-header">
+            <nav class="motion-pill-nav">
+            <div class="nav-indicator"></div>
+            <a href="#" class="nav-item active" data-tab="Graph"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17c3-1 3-9 6-9s3 10 6 10 3-8 6-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Graph</a>
+            <a href="#" class="nav-item" data-tab="Preset"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4 3 9l9 5 9-5-9-5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 14l9 5 9-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Preset</a>
+            <a href="#" class="nav-item" data-tab="Misc"><svg viewBox="0 0 24 24" fill="none"><circle cx="6" cy="6" r="1.6" fill="currentColor"/><circle cx="12" cy="6" r="1.6" fill="currentColor"/><circle cx="18" cy="6" r="1.6" fill="currentColor"/><circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/><circle cx="6" cy="18" r="1.6" fill="currentColor"/><circle cx="12" cy="18" r="1.6" fill="currentColor"/><circle cx="18" cy="18" r="1.6" fill="currentColor"/></svg>Misc</a>
+            <a href="#" class="nav-item" data-tab="Settings"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 13a7.97 7.97 0 0 0 0-2l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L15 3h-4l-.3 2.6a8 8 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.97 7.97 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 1.7 1L11 21h4l.3-2.6a8 8 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Settings</a>
+            </nav>
+        </header>
+
+        <main class="app-main">
+            <section id="Graph" class="tab-panel active">
+            <div class="graph-editor" data-graph-editor>
+                <div class="graph-toolbar">
+                    <div class="graph-title-block">
+                        <span class="graph-kicker">Motion Toolkit / Graph</span>
+                        <h1>Motion Graph</h1>
+                    </div>
+                    <div class="graph-context" data-graph-context>READY</div>
+                </div>
+
+                <div class="graph-main-row">
+                    <aside class="graph-side-panel">
+                        <label class="graph-select-wrap">
+                            <span>Curve</span>
+                            <select data-graph-type aria-label="Graph type">
+                                <option value="bezier">Bezier</option>
+                                <option value="elastic">Elastic</option>
+                                <option value="bouncing">Bouncing</option>
+                                <option value="step">Step</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </label>
+                        <button class="graph-reset-button" type="button" data-graph-reset aria-label="Reset current graph">RESET</button>
+                        <div class="graph-parameters" data-graph-parameters></div>
+                        <div class="keyframe-summary">
+                            <span class="keyframe-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                            <span data-keyframe-summary>2 KEYFRAMES</span>
+                        </div>
+                        <button class="apply-graph-button" type="button" data-graph-apply>APPLY <span>&#8594;</span></button>
+                        <button class="mode-toggle" type="button" data-graph-mode-toggle aria-pressed="false">VALUE</button>
+                        <button class="mode-toggle" type="button" data-expression-toggle aria-pressed="false">KEYFRAME</button>
+                    </aside>
+                    <div class="graph-viewport-shell">
+                        <div class="graph-legend">
+                            <span><i class="legend-line legend-value"></i> Value</span>
+                            <span><i class="legend-line legend-reference"></i> Reference</span>
+                        </div>
+                        <canvas class="graph-viewport" data-graph-canvas aria-label="Motion graph viewport"></canvas>
+                        <div class="graph-axis-label graph-axis-y-top">+120%</div>
+                        <div class="graph-axis-label graph-axis-y-zero">0%</div>
+                        <div class="graph-axis-label graph-axis-y-bottom">-20%</div>
+                        <div class="graph-axis-label graph-axis-x-start">0:00</div>
+                        <div class="graph-axis-label graph-axis-x-end">1:00</div>
+                        <div class="graph-empty-state" data-graph-empty hidden>
+                            <strong>No property selected</strong>
+                            <span>Select an animated property in After Effects to inspect its motion.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="graph-state-strip" data-graph-state>UI READY / APPLICATION BRIDGE STANDBY</div>
+            </div>
+            </section>
+
+            <section id="Preset" class="tab-panel">
+            <div class="preset-browser">
+                <div class="browser-heading">
+                    <div>
+                        <span class="browser-kicker">Motion Library</span>
+                        <h1>Preset Browser</h1>
+                    </div>
+                    <span class="browser-count" data-preset-count>SCANNING...</span>
+                </div>
+
+                <label class="preset-search">
+                    <span class="search-icon" aria-hidden="true"></span>
+                    <input type="search" class="preset-search-input" placeholder="Search presets..." aria-label="Search presets">
+                    <kbd>/</kbd>
+                </label>
+
+                <div class="browser-toolbar">
+                    <div class="preset-filters" role="group" aria-label="Preset categories"></div>
+                    <div class="browser-actions">
+                        <button class="browser-builtins-toggle" type="button" aria-pressed="false">AE Built-ins</button>
+                        <button class="browser-sort" type="button" aria-label="Sort presets">A-Z <span aria-hidden="true">&#8597;</span></button>
+                    </div>
+                </div>
+
+                <div class="preset-list" aria-live="polite">
+                    <div class="preset-empty">Scanning preset/ffx...</div>
+                </div>
+            </div>
+            </section>
+
+            <section id="Misc" class="tab-panel">
+            <div class="custom-preset-browser" data-custom-preset-browser>
+                <div class="custom-preset-heading">
+                    <div>
+                        <span class="browser-kicker">Custom Library</span>
+                        <h1>Motion Presets</h1>
+                    </div>
+                    <span class="browser-count" data-custom-preset-count>READY</span>
+                </div>
+                <div class="custom-preset-list" data-custom-preset-list>
+                    <div class="preset-empty">Open Misc to scan preset/custom...</div>
+                </div>
+                <div class="custom-preset-detail" data-custom-preset-detail hidden></div>
+            </div>
+
+            <div class="organize-panel">
+                <div class="organize-heading">
+                    <span class="browser-kicker">Project Panel</span>
+                    <h2>Organize</h2>
+                </div>
+                <p class="organize-note">Sorts project items into folders by type: Comp, Videos, Flowframe, sound.</p>
+                <button class="organize-button" type="button" data-organize-project>ORGANIZE</button>
+                <p class="organize-result" data-organize-result hidden></p>
+            </div>
+
+            <div class="ai-enhance-panel">
+                <div class="ai-enhance-heading">
+                    <span class="browser-kicker">External / AI Video</span>
+                    <h2>AI Enhance</h2>
+                </div>
+                <div class="ai-enhance-row">
+                    <span class="ai-enhance-dot dot-1" aria-hidden="true"></span>
+                    <div class="ai-enhance-copy">
+                        <strong>AI Upscale</strong>
+                        <small>Boosts rendered footage resolution.</small>
+                    </div>
+                    <button class="ai-enhance-more" type="button" data-external-link="https://github.com/NevermindNilas/TheAnimeScripter">More Info</button>
+                </div>
+                <div class="ai-enhance-row">
+                    <span class="ai-enhance-dot dot-2" aria-hidden="true"></span>
+                    <div class="ai-enhance-copy">
+                        <strong>Frame Interpolation</strong>
+                        <small>Smooths motion between existing frames.</small>
+                    </div>
+                    <button class="ai-enhance-more" type="button" data-external-link="https://github.com/NevermindNilas/TheAnimeScripter">More Info</button>
+                </div>
+                <div class="ai-enhance-row">
+                    <span class="ai-enhance-dot dot-3" aria-hidden="true"></span>
+                    <div class="ai-enhance-copy">
+                        <strong>Restore &amp; Denoise</strong>
+                        <small>Cleans up noise, blocking and soft lines.</small>
+                    </div>
+                    <button class="ai-enhance-more" type="button" data-external-link="https://github.com/NevermindNilas/TheAnimeScripter">More Info</button>
+                </div>
+                <p class="ai-enhance-note">Runs via the standalone TheAnimeScripter app — not bundled inside this panel.</p>
+            </div>
+            </section>
+
+            <section id="Settings" class="tab-panel">
+            <div class="settings-panel">
+                <div class="panel-header">Settings</div>
+                <details class="search-filter-manager" open>
+                    <summary class="manager-heading">
+                        <div>
+                            <span class="browser-kicker">Preset Browser</span>
+                            <h2>Search Filters</h2>
+                        </div>
+                        <button class="add-search-filter" type="button">+ Add Search Filters</button>
+                    </summary>
+                    <div class="search-filter-content">
+                        <p class="manager-description">Save quick searches for preset names and prefixes.</p>
+                        <form class="search-filter-form" hidden>
+                            <label>
+                                <span>Filter name</span>
+                                <input class="filter-label-input" type="text" placeholder="NEP Presets">
+                            </label>
+                            <label>
+                                <span>Search text</span>
+                                <input class="filter-query-input" type="text" placeholder="nep_">
+                            </label>
+                            <div class="filter-form-actions">
+                                <button class="save-search-filter" type="submit">Save Filter</button>
+                                <button class="cancel-search-filter" type="button">Cancel</button>
+                            </div>
+                        </form>
+                        <div class="saved-search-filters"></div>
+                    </div>
+                </details>
+
+                <div class="discord-rpc-panel" data-discord-panel>
+                    <div class="discord-rpc-heading">
+                        <span class="browser-kicker">Integration</span>
+                        <h2>Discord Rich Presence</h2>
+                    </div>
+                    <p class="discord-rpc-note">Shows a live status on your Discord profile while this panel is open. Free to set up: create an app at discord.com/developers/applications and paste its Client ID below. Every field is optional except Client ID.</p>
+
+                    <label class="discord-field-row">
+                        <span>Enable</span>
+                        <label class="toggle">
+                            <input type="checkbox" data-discord-enabled>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Client ID</span>
+                        <input type="text" data-discord-client-id placeholder="from your Discord app">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Details (top line)</span>
+                        <input type="text" data-discord-details placeholder="Auto: follows the active tab">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>State (second line)</span>
+                        <input type="text" data-discord-state placeholder="e.g. In After Effects">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Large image key</span>
+                        <input type="text" data-discord-large-image placeholder="asset key from your app">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Large image text</span>
+                        <input type="text" data-discord-large-text placeholder="tooltip on hover">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Small image key</span>
+                        <input type="text" data-discord-small-image placeholder="asset key from your app">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Small image text</span>
+                        <input type="text" data-discord-small-text placeholder="tooltip on hover">
+                    </label>
+
+                    <label class="discord-field-row">
+                        <span>Show elapsed time</span>
+                        <label class="toggle">
+                            <input type="checkbox" data-discord-elapsed checked>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Button 1 label</span>
+                        <input type="text" data-discord-btn1-label placeholder="optional">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Button 1 URL</span>
+                        <input type="text" data-discord-btn1-url placeholder="https://...">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Button 2 label</span>
+                        <input type="text" data-discord-btn2-label placeholder="optional">
+                    </label>
+
+                    <label class="discord-field-stack">
+                        <span>Button 2 URL</span>
+                        <input type="text" data-discord-btn2-url placeholder="https://...">
+                    </label>
+
+                    <button class="discord-save-button" type="button" data-discord-save>SAVE</button>
+                    <p class="discord-status" data-discord-status>Disabled</p>
+                </div>
+
+                <div class="depth-settings-panel" data-depth-settings-panel>
+                    <div class="depth-settings-heading">
+                        <span class="browser-kicker">Depth</span>
+                        <h2>Depth Generation</h2>
+                    </div>
+                    <p class="depth-settings-note">Model used by the footer DEPTH button. Runs via a background Python process - see host/python/depth_runner.py. Add more choices in client/js/lib/depth-config.js.</p>
+                    <label class="discord-field-stack">
+                        <span>Model</span>
+                        <select data-depth-model-select></select>
+                    </label>
+                </div>
+
+                <div class="depth-settings-panel" data-rife-settings-panel>
+                    <div class="depth-settings-heading">
+                        <span class="browser-kicker">Playback</span>
+                        <h2>RIFE Interpolation</h2>
+                    </div>
+                    <p class="depth-settings-note">Used by the footer PLAY button (2x/4x/8x/16x). Runs rife_runner.py on an NVIDIA CUDA GPU only - see host/python/requirements.txt. Place model weights in rife-models/ (see its README).</p>
+                    <label class="discord-field-stack">
+                        <span>Model</span>
+                        <select data-rife-model-select></select>
+                    </label>
+                    <label class="discord-field-stack">
+                        <span>Max output height (px)</span>
+                        <input type="number" min="240" max="2160" step="2" data-rife-resolution placeholder="1080">
+                    </label>
+                    <button class="discord-save-button" type="button" data-rife-save>SAVE</button>
+                    <p class="discord-status" data-rife-status></p>
+                </div>
+            </div>
+            <p class="settings-version" data-settings-version></p>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-left">
+
+                <div class="anchor-point">
+                    <button class="anchor-button" data-anchor="top-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+                    <button class="anchor-button" data-anchor="top-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+
+                    <button class="anchor-button" data-anchor="top-right">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+                    <button class="anchor-button" data-anchor="middle-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+
+                    <button class="anchor-button" data-anchor="center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+                    <button class="anchor-button" data-anchor="middle-right">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+
+                    <button class="anchor-button" data-anchor="bottom-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+                    <button class="anchor-button" data-anchor="bottom-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+
+                    <button class="anchor-button" data-anchor="bottom-right">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+                            <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                    </button>
+
+
+                </div>
+            </div>
+            <div class="footer-right">
+                <button class="footer-mode-toggle" type="button" data-footer-mode-toggle aria-pressed="false" aria-label="Switch layer placer mode">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M7 6h10M17 6l-3-3M17 6l-3 3M7 18H17M7 18l3 3M7 18l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+
+                <div class="quick-placer" data-footer-mode-a>
+                    <button class="quick-layer" data-quicklayer="Adjustment">ADJ</button>
+                    <button class="quick-layer" data-quicklayer="Null">NUL</button>
+                    <button class="quick-layer" data-quicklayer="Camera">CAM</button>
+                    <button class="quick-layer" data-quicklayer="Solid">SOL</button>
+                    <button class="quick-layer" data-quicklayer="Text">TXT</button>
+                    <button class="quick-layer" data-quicklayer="Shape">SHP</button>
+
+                    <label>Parent Layer: </label>
+                    <label class="toggle">
+                        <input type="checkbox" class="toggle-parent">
+                        <span class="slider"></span>
+                    </label>
+
+                    <label>3D Layer: </label>
+                    <label class="toggle">
+                        <input type="checkbox" class="toggle-3d">
+                        <span class="slider"></span>
+                    </label>
+
+                </div>
+
+                <div class="playback-placer" data-footer-mode-b hidden>
+                    <div class="playback-row">
+                        <button class="play-button" type="button" aria-label="Play">
+                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7Z" fill="currentColor"/></svg>
+                        </button>
+                        <select class="speed-select" aria-label="Playback speed">
+                            <option value="2">2x</option>
+                            <option value="4">4x</option>
+                            <option value="8">8x</option>
+                            <option value="16">16x</option>
+                        </select>
+                    </div>
+                    <button class="wide-button" type="button" data-sequence-button>SEQUENCE</button>
+                    <button class="wide-button" type="button" data-depth-button>DEPTH</button>
+                    <p class="playback-status" data-playback-status hidden></p>
+                </div>
+            </div>
+        </footer>
+        </div>
+    </div>
+
+    <!-- Adobe CEP API -->
+    <script src="lib/CSInterface.js"></script>
+    <!-- CEP-specific UI fixes (select-all suppression, focus-ring cleanup) -->
+    <script src="lib/ui-polish.js"></script>
+
+    <!-- SHARED UTILITIES -->
+    <script src="js/lib/evalscript-util.js"></script>
+    <script src="js/lib/discord-ipc.js"></script>
+    <script src="js/lib/depth-config.js"></script>
+
+    <!-- UI COMPONENTS JS -->
+    <script src="js/components/pillnav.js"></script>
+    <script src="js/components/tabchanger.js"></script>
+    <script src="js/components/preset-browser.js"></script>
+    <script src="js/components/custom-preset-browser.js"></script>
+    <script src="js/components/external-link.js"></script>
+    <script src="js/components/footer-mode.js"></script>
+    <script src="js/components/graph-editor.js"></script>
+
+    <!-- MODULES SCRIPT -->
+    <script src="js/modules/anchor.js"></script>
+    <script src="js/modules/quicklayer.js"></script>
+    <script src="js/modules/organize.js"></script>
+    <script src="js/modules/discord-rpc.js"></script>
+    <script src="js/modules/graph-engine.js"></script>
+    <script src="js/modules/graph-bridge.js"></script>
+    <script src="js/modules/sequence.js"></script>
+    <script src="js/modules/depth.js"></script>
+    <script src="js/modules/playback.js"></script>
+    <script src="js/modules/settings.js"></script>
+  </body>
+</html>
