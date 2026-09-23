@@ -1,0 +1,1 @@
+A clean frame/border preset - sample entry showing how a custom preset's name, thumbnail, and description line up in the Misc tab.

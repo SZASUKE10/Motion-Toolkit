@@ -1,0 +1,219 @@
+/*
+  ========================================
+  Motion Toolkit — Core Shell Stylesheet
+  ========================================
+  Design tokens (colors/type/spacing) + the app shell:
+  header (pill nav) / main (tab panels) / footer (anchor + quick layer bar).
+
+  Palette is monotone on purpose: grayscale everywhere, with --color-error
+  held back as the one real color, reserved for actual error/destructive states.
+  Base surfaces sit a step lighter than true black - full black read as too
+  heavy, especially on the graph canvas.
+*/
+
+:root {
+  /* Core surfaces — true neutral grays, no color tint */
+  --bg-app: #141414;       /* Main app background */
+  --bg-panel: #1c1c1c;     /* Panel / card background, one step up from app bg */
+  --bg-input: #101010;     /* Deep well used for inputs and the graph canvas */
+  --divider: #333333;      /* Border color separating elements */
+
+  /* Button background states */
+  --btn-base: #202020;
+  --btn-hover: #2a2a2a;
+  --btn-active: #101010;
+
+  /* Typography */
+  --text-primary: #eaeaea;
+  --text-secondary: #949494;
+  --font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Emphasis washes — used for focused/active/selected states, always neutral */
+  --tint-weak: rgba(255, 255, 255, 0.08);
+  --tint-strong: rgba(255, 255, 255, 0.16);
+
+  /* 3-step gray ramp — the only tool for telling categories apart (presets, dots) */
+  --swatch-1: #d9d9d9;  /* lightest */
+  --swatch-2: #979797;  /* mid */
+  --swatch-3: #585858;  /* darkest (still visible on near-black) */
+
+  /* The one reserved color — errors and destructive actions only */
+  --color-error: #ff5c5c;
+  --color-error-tint: rgba(255, 92, 92, 0.12);
+
+  /* Explicit one-off color for the playback play button, by request - not
+     part of the general palette, don't reuse this elsewhere. */
+  --color-play: #2f6fed;
+
+  /* Layout */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --gap: 8px;
+}
+
+/* App full-height container */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevents whole-page scrolling */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-base);
+  font-size: 12px;
+}
+
+.app-shell input,
+.app-shell textarea,
+.app-shell select,
+.app-shell button,
+.app-shell a {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.preset-search-input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-base);
+}
+
+/* Generic small label used by the Settings tab header */
+.panel-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 6px;
+}
+
+/* ========================================
+   1. Top persistent bar — pill nav (no title row, kept slim on purpose)
+   ======================================== */
+.app-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, var(--bg-panel), var(--bg-app));
+  border-bottom: 1px solid var(--divider);
+  z-index: 10;
+}
+
+.motion-pill-nav {
+  position: relative;
+  display: inline-flex;
+  align-self: center;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--divider);
+  border-radius: 999px;
+  padding: 5px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.nav-item {
+  position: relative;
+  z-index: 2; /* Keeps content above the sliding indicator */
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-base);
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.nav-item svg {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  opacity: 0.75;
+}
+
+.nav-item:hover { color: var(--text-primary); }
+.nav-item.active { color: var(--text-primary); }
+.nav-item.active svg { opacity: 1; color: var(--text-primary); }
+
+/* The morphing indicator — glides between nav items on click, see pillnav.js */
+.nav-indicator {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  height: calc(100% - 10px);
+  background-color: var(--bg-input);
+  border-radius: 999px;
+  z-index: 1;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: inset 0 0 0 1px var(--divider), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ========================================
+   2. Middle dynamic scrollable area
+   ======================================== */
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.tab-panel {
+  display: none;
+  width: 100%;
+  max-width: 500px;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* ========================================
+   3. Bottom persistent bar — anchor grid (left) + quick layer placer (right)
+   Layout is unchanged; it now just inherits the tokens above.
+   ======================================== */
+.app-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--divider);
+  z-index: 10;
+}
+
+.status-indicator {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.footer-right {
+  display: flex;
+  gap: var(--gap);
+}
